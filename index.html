@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b4f47">
+  <meta name="description" content="Aplikasi registrasi dan check-in peserta acara yang mendukung penyimpanan lokal dan penggunaan offline.">
+  <title>EVENT CHECK-IN</title>
+  <link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="EVENT CHECK-IN beranda">
+      <span class="brand-mark">EC</span>
+      <span><strong id="brandTitle">EVENT CHECK-IN</strong><small id="brandSubtitle">Registrasi & absensi acara</small></span>
+    </a>
+    <div class="top-actions">
+      <span id="connectionStatus" class="status-pill"><i></i>Memeriksa koneksi</span>
+      <button id="installBtn" class="btn btn-quiet hidden" type="button">Pasang aplikasi</button>
+      <button id="settingsOpen" class="icon-btn" type="button" title="Pengaturan" aria-label="Pengaturan">⚙</button>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <section class="event-strip">
+      <div>
+        <p class="eyebrow">KEGIATAN AKTIF</p>
+        <h1 id="eventName">Konferensi / Seminar</h1>
+        <p id="eventMeta" class="muted">Atur nama, tanggal, dan lokasi di Pengaturan.</p>
+      </div>
+      <div class="event-strip-right">
+        <span class="local-badge"><span class="pulse"></span> DATA TERSIMPAN DI PERANGKAT</span>
+        <p class="tiny muted">Mode tanpa server</p>
+      </div>
+    </section>
+
+    <nav class="tabs" aria-label="Navigasi utama">
+      <button class="tab active" data-view="scanner" type="button">▦ <span>Scanner</span></button>
+      <button class="tab" data-view="participants" type="button">♙ <span>Peserta</span></button>
+      <button class="tab" data-view="reports" type="button">▤ <span>Laporan</span></button>
+      <button class="tab" data-view="help" type="button">? <span>Panduan</span></button>
+    </nav>
+
+    <section id="view-scanner" class="view active">
+      <div class="scanner-layout">
+        <article class="panel camera-panel">
+          <div class="panel-heading">
+            <div><p class="eyebrow">LOKET REGISTRASI</p><h2>Pindai ID Peserta</h2></div>
+            <span id="cameraState" class="mini-status">Kamera belum aktif</span>
+          </div>
+          <div class="camera-stage" id="cameraStage">
+            <video id="cameraVideo" playsinline muted></video>
+            <div class="camera-placeholder" id="cameraPlaceholder">
+              <div class="scan-icon">▦</div>
+              <strong>Kamera siap diaktifkan</strong>
+              <span>Arahkan kamera ke QR Code atau barcode pada ID Card peserta.</span>
+            </div>
+            <div class="scan-frame" aria-hidden="true"><span></span><span></span><span></span><span></span><b></b></div>
+            <canvas id="scanCanvas" class="hidden"></canvas>
+          </div>
+          <p id="scannerMessage" class="helper">Kamera memerlukan izin browser dan koneksi HTTPS. Input manual tetap tersedia.</p>
+          <div class="button-row">
+            <button id="cameraStart" class="btn btn-primary" type="button">Aktifkan kamera</button>
+            <button id="cameraSwitch" class="btn btn-secondary" type="button" disabled>Ganti kamera</button>
+          </div>
+          <div class="divider"></div>
+          <form id="manualForm" class="manual-form">
+            <label for="manualCode">Input ID manual / scanner USB</label>
+            <div class="input-row">
+              <input id="manualCode" name="manualCode" autocomplete="off" placeholder="Contoh: EVT2026-0001" aria-describedby="manualHelp">
+              <button class="btn btn-dark" type="submit">Verifikasi</button>
+            </div>
+            <p id="manualHelp" class="tiny muted">Scanner USB/Bluetooth yang bertindak seperti keyboard biasanya dapat digunakan di kolom ini.</p>
+          </form>
+        </article>
+
+        <aside class="right-column">
+          <article class="panel result-panel">
+            <div class="panel-heading"><div><p class="eyebrow">HASIL VERIFIKASI</p><h2 id="resultHeading">Menunggu pemindaian</h2></div><span id="resultBadge" class="result-badge neutral">SIAP</span></div>
+            <div id="resultContent" class="result-content empty-result">
+              <div class="avatar avatar-large">?</div>
+              <strong>Belum ada peserta dipindai</strong>
+              <p class="muted">Hasil verifikasi akan muncul di sini.</p>
+            </div>
+            <button id="nextScan" class="btn btn-primary btn-block" type="button">Scan peserta berikutnya</button>
+          </article>
+
+          <div class="stat-grid">
+            <article class="stat-card"><span class="stat-icon green">✓</span><div><span class="stat-label">Peserta hadir</span><strong id="statPresent">0</strong></div></article>
+            <article class="stat-card"><span class="stat-icon amber">↻</span><div><span class="stat-label">Antrean lokal</span><strong id="statQueue">0</strong></div></article>
+            <article class="stat-card"><span class="stat-icon blue">♙</span><div><span class="stat-label">Terdaftar</span><strong id="statTotal">0</strong></div></article>
+            <article class="stat-card"><span class="stat-icon purple">◷</span><div><span class="stat-label">Belum hadir</span><strong id="statAbsent">0</strong></div></article>
+          </div>
+          <article class="notice-card"><span class="notice-icon">ⓘ</span><div><strong>Perhatian: data lokal</strong><p>Data tersimpan pada browser/perangkat ini. Ekspor cadangan secara berkala untuk memindahkan data ke perangkat lain.</p></div></article>
+        </aside>
+      </div>
+    </section>
+
+    <section id="view-participants" class="view">
+      <div class="section-head"><div><p class="eyebrow">DATABASE LOKAL</p><h2>Data Peserta</h2><p class="muted">Kelola daftar peserta yang tersimpan di perangkat ini.</p></div><div class="button-row wrap"><button id="importBtn" class="btn btn-secondary" type="button">Impor CSV</button><button id="exportParticipants" class="btn btn-secondary" type="button">Ekspor CSV</button><button id="addParticipantBtn" class="btn btn-primary" type="button">+ Tambah peserta</button><input id="csvFile" class="hidden" type="file" accept=".csv,text/csv"></div></div>
+      <div class="panel">
+        <div class="toolbar"><input id="participantSearch" class="search-input" placeholder="Cari ID, nama, atau lembaga…"><span id="participantCount" class="muted tiny">0 peserta</span></div>
+        <div class="table-wrap"><table><thead><tr><th>ID Peserta</th><th>Nama lengkap</th><th>Lembaga</th><th>Status registrasi</th><th>Aksi</th></tr></thead><tbody id="participantsBody"></tbody></table></div>
+        <div id="participantsEmpty" class="empty-state hidden">Belum ada data peserta. Impor CSV contoh atau tambahkan peserta.</div>
+      </div>
+      <div class="panel subtle-panel"><div><strong>Data demonstrasi</strong><p class="muted">Unduh atau impor <code>sample-participants.csv</code> yang disertakan dalam paket ini. Seluruh data contoh adalah fiktif.</p></div><button id="loadDemo" class="btn btn-secondary" type="button">Muat 50 peserta contoh</button></div>
+    </section>
+
+    <section id="view-reports" class="view">
+      <div class="section-head"><div><p class="eyebrow">RINGKASAN</p><h2>Laporan Kehadiran</h2><p class="muted">Laporan dihitung dari catatan kehadiran unik yang tersimpan lokal.</p></div><div class="button-row wrap"><button id="exportAttendance" class="btn btn-primary" type="button">Ekspor laporan CSV</button><button id="exportBackup" class="btn btn-secondary" type="button">Ekspor cadangan lengkap</button><button id="importBackupBtn" class="btn btn-secondary" type="button">Pulihkan cadangan</button><input id="backupFile" class="hidden" type="file" accept=".json,application/json"></div></div>
+      <div class="report-cards">
+        <article class="report-card"><span>Total peserta</span><strong id="reportTotal">0</strong></article>
+        <article class="report-card"><span>Hadir</span><strong id="reportPresent">0</strong></article>
+        <article class="report-card"><span>Belum hadir</span><strong id="reportAbsent">0</strong></article>
+        <article class="report-card"><span>Persentase hadir</span><strong id="reportPercent">0%</strong></article>
+      </div>
+      <div class="panel">
+        <div class="panel-heading"><div><h2>Riwayat check-in</h2><p class="muted tiny">Peserta yang sama hanya dihitung satu kali untuk kegiatan ini.</p></div><input id="attendanceSearch" class="search-input compact" placeholder="Cari riwayat…"></div>
+        <div class="table-wrap"><table><thead><tr><th>Waktu check-in</th><th>ID peserta</th><th>Nama</th><th>Lembaga</th><th>Status lokal</th></tr></thead><tbody id="attendanceBody"></tbody></table></div>
+        <div id="attendanceEmpty" class="empty-state hidden">Belum ada catatan kehadiran.</div>
+      </div>
+      <div class="panel queue-panel"><div><p class="eyebrow">ANTREAN OFFLINE</p><h2 id="queueTitle">0 transaksi menunggu</h2><p class="muted">Karena tidak ada backend, tombol ekspor membuat berkas antrean/cadangan yang dapat dipindahkan secara manual. Ini bukan sinkronisasi otomatis ke server.</p></div><button id="exportQueue" class="btn btn-secondary" type="button">Ekspor antrean JSON</button></div>
+    </section>
+
+    <section id="view-help" class="view">
+      <div class="section-head"><div><p class="eyebrow">PUSAT BANTUAN</p><h2>Panduan Penggunaan</h2><p class="muted">Langkah operasional dan batasan versi GitHub Pages.</p></div></div>
+      <div class="help-grid">
+        <article class="panel help-card"><span class="help-number">01</span><h3>Siapkan peserta</h3><p>Masuk ke menu Peserta, impor file CSV dengan kolom <code>participant_code,full_name,institution,photo_url,registration_status</code>, atau muat 50 data contoh. Pastikan data sudah tersedia sebelum internet terputus.</p></article>
+        <article class="panel help-card"><span class="help-number">02</span><h3>Aktifkan scanner</h3><p>Gunakan HTTPS, tekan Aktifkan kamera dan izinkan akses kamera. Jika pemindaian kamera tidak didukung browser, gunakan scanner USB/Bluetooth atau input ID manual.</p></article>
+        <article class="panel help-card"><span class="help-number">03</span><h3>Catat kehadiran</h3><p>Pindai kode yang berisi ID peserta, atau URL dengan parameter ID yang dikonfigurasi di Pengaturan. Peserta terdaftar dicatat satu kali. Pemindaian ulang tidak menggandakan kehadiran.</p></article>
+        <article class="panel help-card"><span class="help-number">04</span><h3>Cadangkan data</h3><p>Gunakan Ekspor cadangan lengkap secara berkala. Untuk memindahkan data, buka aplikasi pada perangkat tujuan lalu pilih Pulihkan cadangan. Catatan yang bertabrakan digabung tanpa menggandakan check-in.</p></article>
+      </div>
+      <div class="panel limitation-panel"><h2>Batasan teknis yang perlu diketahui</h2><ul><li>Tidak ada backend, akun server, atau database bersama. Data browser tidak otomatis terlihat pada perangkat lain.</li><li>Antrean offline hanya berupa catatan lokal yang dapat diekspor sebagai JSON; tidak ada sinkronisasi otomatis ke server.</li><li>Nama pengguna/PIN di frontend tidak dapat menjadi pengamanan kuat. Jangan simpan data sensitif yang memerlukan kontrol akses server.</li><li>Data IndexedDB dapat terhapus jika data situs/browser dibersihkan. Ekspor cadangan secara berkala.</li><li>Scanner menggunakan BarcodeDetector bawaan browser. Dukungan format QR/barcode berbeda menurut browser dan perangkat.</li><li>Foto memakai URL yang tersedia saat online dan dapat tidak tampil saat offline. Versi ini tidak mengunggah atau menyimpan foto ke object storage.</li></ul></div>
+    </section>
+  </main>
+
+  <footer class="footer"><span>EVENT CHECK-IN · GitHub Pages Edition</span><span>Tanpa server · IndexedDB · PWA</span></footer>
+
+  <dialog id="settingsDialog" class="modal">
+    <form id="settingsForm" method="dialog">
+      <div class="modal-head"><div><p class="eyebrow">KONFIGURASI LOKAL</p><h2>Pengaturan aplikasi</h2></div><button class="icon-btn" type="button" data-close="settingsDialog" aria-label="Tutup">×</button></div>
+      <div class="form-grid">
+        <label>Judul aplikasi<input name="title" maxlength="80" required></label>
+        <label>Subjudul<input name="subtitle" maxlength="120"></label>
+        <label>Nama kegiatan<input name="eventName" maxlength="120" required></label>
+        <label>Tanggal kegiatan<input name="eventDate" type="date"></label>
+        <label class="full">Lokasi kegiatan<input name="eventLocation" maxlength="160"></label>
+        <label>Prefix ID (opsional)<input name="idPrefix" maxlength="30" placeholder="EVT2026-"></label>
+        <label>Parameter ID pada URL<input name="urlParam" maxlength="40" placeholder="id"></label>
+        <label>Pesan sukses<input name="successMessage" maxlength="100"></label>
+        <label>Warna utama<input name="primaryColor" type="color"></label>
+      </div>
+      <p class="tiny muted">Pengaturan hanya disimpan di browser ini. Parameter URL digunakan untuk mengambil ID dari tautan QR.</p>
+      <div class="modal-actions"><button id="resetSettings" class="btn btn-quiet" type="button">Pulihkan awal</button><span class="spacer"></span><button class="btn btn-secondary" type="button" data-close="settingsDialog">Batal</button><button class="btn btn-primary" type="submit">Simpan pengaturan</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="participantDialog" class="modal">
+    <form id="participantForm" method="dialog">
+      <div class="modal-head"><div><p class="eyebrow">DATA PESERTA</p><h2 id="participantDialogTitle">Tambah peserta</h2></div><button class="icon-btn" type="button" data-close="participantDialog" aria-label="Tutup">×</button></div>
+      <input name="originalCode" type="hidden">
+      <div class="form-grid">
+        <label>ID peserta<input name="participant_code" required maxlength="80" autocomplete="off"></label>
+        <label>Nama lengkap<input name="full_name" required maxlength="160"></label>
+        <label>Lembaga / organisasi<input name="institution" maxlength="160"></label>
+        <label>URL foto (opsional)<input name="photo_url" type="url" placeholder="https://…"></label>
+        <label class="full">Status registrasi<select name="registration_status"><option value="terdaftar">Terdaftar</option><option value="nonaktif">Nonaktif</option></select></label>
+      </div>
+      <div class="modal-actions"><span class="spacer"></span><button class="btn btn-secondary" type="button" data-close="participantDialog">Batal</button><button class="btn btn-primary" type="submit">Simpan peserta</button></div>
+    </form>
+  </dialog>
+
+  <div id="toastRegion" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+  <script src="./app.js" defer></script>
+</body>
+</html>

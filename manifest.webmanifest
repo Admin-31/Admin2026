@@ -1,0 +1,19 @@
+{
+  "name": "EVENT CHECK-IN — Registrasi & Absensi",
+  "short_name": "EVENT CHECK-IN",
+  "description": "Aplikasi check-in acara berbasis perangkat dengan dukungan offline.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f8f7",
+  "theme_color": "#0b4f47",
+  "icons": [
+    {
+      "src": "./assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "lang": "id"
+}
